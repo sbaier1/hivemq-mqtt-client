@@ -8,7 +8,7 @@ plugins {
 description = "Adds dependencies for the HiveMQ MQTT Client proxy module"
 
 metadata {
-    moduleName = "com.hivemq.client.mqtt.proxy"
+    moduleName = "com.hivemq.client2.mqtt.proxy"
     readableName = "HiveMQ MQTT Client proxy module"
 }
 

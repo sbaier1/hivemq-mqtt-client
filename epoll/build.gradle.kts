@@ -8,7 +8,7 @@ plugins {
 description = "Adds dependencies for the HiveMQ MQTT Client epoll module"
 
 metadata {
-    moduleName = "com.hivemq.client.mqtt.epoll"
+    moduleName = "com.hivemq.client2.mqtt.epoll"
     readableName = "HiveMQ MQTT Client epoll module"
 }
 
