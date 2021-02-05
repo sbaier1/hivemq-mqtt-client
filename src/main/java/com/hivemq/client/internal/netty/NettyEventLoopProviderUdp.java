@@ -25,10 +25,10 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.epoll.Epoll;
+import io.netty.channel.epoll.EpollDatagramChannel;
 import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.jetbrains.annotations.NotNull;
@@ -42,13 +42,14 @@ import java.util.function.BiFunction;
 
 /**
  * @author Silvio Giebl
+ * @author Simon Baier
  */
 @ThreadSafe
-public class NettyEventLoopProvider {
+public class NettyEventLoopProviderUdp {
 
-    private static final @NotNull InternalLogger LOGGER = InternalLoggerFactory.getLogger(NettyEventLoopProvider.class);
+    private static final @NotNull InternalLogger LOGGER = InternalLoggerFactory.getLogger(NettyEventLoopProviderUdp.class);
 
-    public static final @NotNull NettyEventLoopProvider INSTANCE;
+    public static final @NotNull NettyEventLoopProviderUdp INSTANCE;
 
     static {
         if (ClassUtil.isAvailable("io.netty.channel.epoll.Epoll")) {
@@ -58,15 +59,15 @@ public class NettyEventLoopProvider {
         }
     }
 
-    private static NettyEventLoopProvider nioEventLoopProvider() {
-        return new NettyEventLoopProvider(NioEventLoopGroup::new, NioSocketChannel::new);
+    private static NettyEventLoopProviderUdp nioEventLoopProvider() {
+        return new NettyEventLoopProviderUdp(NioEventLoopGroup::new, NioDatagramChannel::new);
     }
 
     private static class EpollHolder {
 
-        private static NettyEventLoopProvider eventLoopProvider() {
+        private static NettyEventLoopProviderUdp eventLoopProvider() {
             if (Epoll.isAvailable()) {
-                return new NettyEventLoopProvider(EpollEventLoopGroup::new, EpollSocketChannel::new);
+                return new NettyEventLoopProviderUdp(EpollEventLoopGroup::new, EpollDatagramChannel::new);
             } else {
                 return nioEventLoopProvider();
             }
@@ -77,7 +78,7 @@ public class NettyEventLoopProvider {
     private final @NotNull BiFunction<Integer, Executor, MultithreadEventLoopGroup> eventLoopGroupFactory;
     private final @NotNull ChannelFactory<?> channelFactory;
 
-    private NettyEventLoopProvider(
+    private NettyEventLoopProviderUdp(
             final @NotNull BiFunction<Integer, Executor, MultithreadEventLoopGroup> eventLoopGroupFactory,
             final @NotNull ChannelFactory<?> channelFactory) {
 

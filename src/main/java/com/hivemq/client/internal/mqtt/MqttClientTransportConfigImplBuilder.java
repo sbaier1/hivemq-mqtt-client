@@ -18,10 +18,7 @@ package com.hivemq.client.internal.mqtt;
 
 import com.hivemq.client.internal.util.Checks;
 import com.hivemq.client.internal.util.InetSocketAddressUtil;
-import com.hivemq.client.mqtt.MqttClientSslConfig;
-import com.hivemq.client.mqtt.MqttClientTransportConfigBuilder;
-import com.hivemq.client.mqtt.MqttProxyConfig;
-import com.hivemq.client.mqtt.MqttWebSocketConfig;
+import com.hivemq.client.mqtt.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -46,6 +43,7 @@ public abstract class MqttClientTransportConfigImplBuilder<B extends MqttClientT
     private @Nullable MqttProxyConfigImpl proxyConfig;
     private int socketConnectTimeoutMs = MqttClientTransportConfigImpl.DEFAULT_SOCKET_CONNECT_TIMEOUT_MS;
     private int mqttConnectTimeoutMs = MqttClientTransportConfigImpl.DEFAULT_MQTT_CONNECT_TIMEOUT_MS;
+    private @NotNull MqttTransportProtocol transportProtocol = MqttTransportProtocol.TCP;
 
     MqttClientTransportConfigImplBuilder() {}
 
@@ -63,6 +61,7 @@ public abstract class MqttClientTransportConfigImplBuilder<B extends MqttClientT
         proxyConfig = builder.proxyConfig;
         socketConnectTimeoutMs = builder.socketConnectTimeoutMs;
         mqttConnectTimeoutMs = builder.mqttConnectTimeoutMs;
+        transportProtocol = builder.transportProtocol;
     }
 
     void set(final @NotNull MqttClientTransportConfigImpl transportConfig) {
@@ -73,6 +72,7 @@ public abstract class MqttClientTransportConfigImplBuilder<B extends MqttClientT
         proxyConfig = transportConfig.getRawProxyConfig();
         socketConnectTimeoutMs = transportConfig.getSocketConnectTimeoutMs();
         mqttConnectTimeoutMs = transportConfig.getMqttConnectTimeoutMs();
+        transportProtocol = transportConfig.getTransportProtocol();
     }
 
     abstract @NotNull B self();
@@ -229,6 +229,12 @@ public abstract class MqttClientTransportConfigImplBuilder<B extends MqttClientT
         return self();
     }
 
+    public @NotNull B transportType(final @NotNull MqttTransportProtocol transportType) {
+        Checks.notNull(transportType, "Transport type");
+        this.transportProtocol = transportType;
+        return self();
+    }
+
     private @NotNull InetSocketAddress getServerAddress() {
         if (serverAddress != null) {
             return serverAddress;
@@ -257,7 +263,7 @@ public abstract class MqttClientTransportConfigImplBuilder<B extends MqttClientT
 
     @NotNull MqttClientTransportConfigImpl buildTransportConfig() {
         return new MqttClientTransportConfigImpl(getServerAddress(), localAddress, sslConfig, webSocketConfig,
-                proxyConfig, socketConnectTimeoutMs, mqttConnectTimeoutMs);
+                proxyConfig, socketConnectTimeoutMs, mqttConnectTimeoutMs, transportProtocol);
     }
 
     public static class Default extends MqttClientTransportConfigImplBuilder<Default>

@@ -21,12 +21,16 @@ import com.hivemq.client.internal.mqtt.handler.auth.MqttAuthHandler;
 import com.hivemq.client.internal.mqtt.handler.auth.MqttConnectAuthHandler;
 import com.hivemq.client.internal.mqtt.handler.auth.MqttDisconnectOnAuthHandler;
 import com.hivemq.client.internal.mqtt.message.connect.MqttConnect;
-import com.hivemq.client.internal.netty.NettyEventLoopProvider;
+import com.hivemq.client.internal.netty.NettyEventLoopProviderTcp;
+import com.hivemq.client.internal.netty.NettyEventLoopProviderUdp;
 import dagger.Lazy;
 import dagger.Module;
 import dagger.Provides;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import org.jetbrains.annotations.NotNull;
+
+import javax.inject.Named;
 
 /**
  * @author Silvio Giebl
@@ -35,8 +39,20 @@ import org.jetbrains.annotations.NotNull;
 abstract class ConnectionModule {
 
     @Provides
-    static @NotNull Bootstrap provideBootstrap(final @NotNull MqttChannelInitializer channelInitializer) {
-        return new Bootstrap().channelFactory(NettyEventLoopProvider.INSTANCE.getChannelFactory())
+    static @NotNull Bootstrap provideTcpBootstrap(final @NotNull MqttChannelInitializer channelInitializer) {
+
+        return new Bootstrap()
+                .channelFactory(NettyEventLoopProviderUdp.INSTANCE.getChannelFactory())
+                .handler(channelInitializer);
+        /*return new Bootstrap().channelFactory(NettyEventLoopProviderTcp.INSTANCE.getChannelFactory())
+                .handler(channelInitializer);*/
+    }
+
+    @Provides
+    @Named("UDP")
+    static @NotNull Bootstrap provideUdpBootstrap(final @NotNull MqttChannelInitializer channelInitializer) {
+        return new Bootstrap()
+                .channelFactory(NettyEventLoopProviderUdp.INSTANCE.getChannelFactory())
                 .handler(channelInitializer);
     }
 

@@ -24,13 +24,17 @@ import com.hivemq.client.internal.mqtt.exceptions.MqttClientStateExceptions;
 import com.hivemq.client.internal.mqtt.lifecycle.MqttClientDisconnectedContextImpl;
 import com.hivemq.client.internal.mqtt.lifecycle.MqttClientReconnector;
 import com.hivemq.client.internal.mqtt.message.connect.MqttConnect;
+import com.hivemq.client.mqtt.MqttTransportProtocol;
 import com.hivemq.client.mqtt.exceptions.ConnectionFailedException;
 import com.hivemq.client.mqtt.lifecycle.MqttClientDisconnectedContext;
 import com.hivemq.client.mqtt.lifecycle.MqttClientDisconnectedListener;
 import com.hivemq.client.mqtt.lifecycle.MqttDisconnectSource;
 import com.hivemq.client.mqtt.mqtt5.message.connect.connack.Mqtt5ConnAck;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.EventLoop;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
 import io.reactivex.Single;
 import io.reactivex.SingleObserver;
 import io.reactivex.internal.disposables.EmptyDisposable;
@@ -78,12 +82,31 @@ public class MqttConnAckSingle extends Single<Mqtt5ConnAck> {
             clientConfig.releaseEventLoop();
             clientConfig.getRawState().set(DISCONNECTED);
         } else {
-            final Bootstrap bootstrap = clientConfig.getClientComponent()
-                    .connectionComponentBuilder()
-                    .connect(connect)
-                    .connAckFlow(flow)
-                    .build()
-                    .bootstrap();
+            final Bootstrap bootstrap;
+            if (MqttTransportProtocol.TCP.equals(clientConfig.getTransportConfig().getTransportProtocol())) {
+                bootstrap = clientConfig.getClientComponent()
+                        .connectionComponentBuilder()
+                        .connect(connect)
+                        .connAckFlow(flow)
+                        .build()
+                        .tcpBootstrap();
+            } else {
+                // Initialize QUIC codec
+                ChannelHandler codec = new QuicClientCodecBuilder().maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
+                        .initialMaxData(10000000)
+                        // As we don't want to support remote initiated streams just setup the limit for local initiated
+                        // streams in this example.
+                        .initialMaxStreamDataBidirectionalLocal(1000000)
+                        .build();
+
+                bootstrap = clientConfig.getClientComponent()
+                        .connectionComponentBuilder()
+                        .connect(connect)
+                        .connAckFlow(flow)
+                        .build()
+                        .udpBootstrap()
+                        .handler(codec);
+            }
 
             final MqttClientTransportConfigImpl transportConfig = clientConfig.getCurrentTransportConfig();
 

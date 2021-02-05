@@ -231,4 +231,7 @@ public interface MqttClientTransportConfigBuilderBase<B extends MqttClientTransp
      */
     @CheckReturnValue
     @NotNull B mqttConnectTimeout(long timeout, @NotNull TimeUnit timeUnit);
+
+    @CheckReturnValue
+    @NotNull B transportType(@NotNull MqttTransportProtocol transportType);
 }

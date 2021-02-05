@@ -94,6 +94,12 @@ public interface MqttClientTransportConfig {
     int getMqttConnectTimeoutMs();
 
     /**
+     * @return the timeout between sending the Connect and receiving the ConnAck message in milliseconds.
+     * @since 1.2
+     */
+    MqttTransportProtocol getTransportProtocol();
+
+    /**
      * Creates a builder for extending this transport configuration.
      *
      * @return the created builder.

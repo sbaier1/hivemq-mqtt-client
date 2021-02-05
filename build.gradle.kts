@@ -87,7 +87,7 @@ dependencies {
     implementation("org.jetbrains:annotations:${property("annotations.version")}")
     implementation("com.google.dagger:dagger:${property("dagger.version")}")
 
-    implementation("com.protocol7:quincy-quic:${property("quic.version")}")
+    implementation("io.netty.incubator:netty-incubator-codec-quic:${property("quic.version")}:osx-x86_64")
 
     compileOnly("org.slf4j:slf4j-api:${property("slf4j.version")}")
 

@@ -22,7 +22,8 @@ import com.hivemq.client.internal.mqtt.ioc.ClientComponent;
 import com.hivemq.client.internal.mqtt.ioc.SingletonComponent;
 import com.hivemq.client.internal.mqtt.message.auth.MqttSimpleAuth;
 import com.hivemq.client.internal.mqtt.message.publish.MqttWillPublish;
-import com.hivemq.client.internal.netty.NettyEventLoopProvider;
+import com.hivemq.client.internal.netty.NettyEventLoopProviderTcp;
+import com.hivemq.client.internal.netty.NettyEventLoopProviderUdp;
 import com.hivemq.client.internal.util.ExecutorUtil;
 import com.hivemq.client.internal.util.collections.ImmutableList;
 import com.hivemq.client.mqtt.MqttClientState;
@@ -180,7 +181,7 @@ public class MqttClientConfig implements Mqtt5ClientConfig {
             EventLoop eventLoop = this.eventLoop;
             if (eventLoop == null) {
                 this.eventLoop = eventLoop =
-                        NettyEventLoopProvider.INSTANCE.acquireEventLoop(executorConfig.getRawNettyExecutor(),
+                        NettyEventLoopProviderUdp.INSTANCE.acquireEventLoop(executorConfig.getRawNettyExecutor(),
                                 executorConfig.getRawNettyThreads());
             }
             return eventLoop;
@@ -198,7 +199,7 @@ public class MqttClientConfig implements Mqtt5ClientConfig {
                         if (eventLoopAcquireCount == this.eventLoopAcquireCount) { // eventLoop has not been reacquired
                             this.eventLoop = null;
                             // releaseEventLoop must be the last statement so everything is cleaned up even if it throws
-                            NettyEventLoopProvider.INSTANCE.releaseEventLoop(executorConfig.getRawNettyExecutor());
+                            NettyEventLoopProviderUdp.INSTANCE.releaseEventLoop(executorConfig.getRawNettyExecutor());
                         }
                     }
                 });

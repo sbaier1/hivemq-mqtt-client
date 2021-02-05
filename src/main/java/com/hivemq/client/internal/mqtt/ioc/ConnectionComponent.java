@@ -33,7 +33,8 @@ import org.jetbrains.annotations.NotNull;
 @ConnectionScope
 public interface ConnectionComponent {
 
-    @NotNull Bootstrap bootstrap();
+    @NotNull Bootstrap tcpBootstrap();
+    @NotNull Bootstrap udpBootstrap();
 
     @Subcomponent.Builder
     interface Builder {

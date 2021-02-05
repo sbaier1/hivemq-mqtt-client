@@ -32,7 +32,7 @@ public class MqttClientTransportConfigImpl implements MqttClientTransportConfig 
 
     public static final @NotNull MqttClientTransportConfigImpl DEFAULT = new MqttClientTransportConfigImpl(
             InetSocketAddressUtil.create(MqttClient.DEFAULT_SERVER_HOST, MqttClient.DEFAULT_SERVER_PORT), null, null,
-            null, null, DEFAULT_SOCKET_CONNECT_TIMEOUT_MS, DEFAULT_MQTT_CONNECT_TIMEOUT_MS);
+            null, null, DEFAULT_SOCKET_CONNECT_TIMEOUT_MS, DEFAULT_MQTT_CONNECT_TIMEOUT_MS, MqttTransportProtocol.TCP);
 
     private final @NotNull InetSocketAddress serverAddress;
     private final @Nullable InetSocketAddress localAddress;
@@ -41,6 +41,7 @@ public class MqttClientTransportConfigImpl implements MqttClientTransportConfig 
     private final @Nullable MqttProxyConfigImpl proxyConfig;
     private final int socketConnectTimeoutMs;
     private final int mqttConnectTimeoutMs;
+    private final @NotNull  MqttTransportProtocol transportProtocol;
 
     MqttClientTransportConfigImpl(
             final @NotNull InetSocketAddress serverAddress,
@@ -49,7 +50,8 @@ public class MqttClientTransportConfigImpl implements MqttClientTransportConfig 
             final @Nullable MqttWebSocketConfigImpl webSocketConfig,
             final @Nullable MqttProxyConfigImpl proxyConfig,
             final int socketConnectTimeoutMs,
-            final int mqttConnectTimeoutMs) {
+            final int mqttConnectTimeoutMs,
+            final @NotNull MqttTransportProtocol transportProtocol) {
 
         this.serverAddress = serverAddress;
         this.localAddress = localAddress;
@@ -58,6 +60,7 @@ public class MqttClientTransportConfigImpl implements MqttClientTransportConfig 
         this.proxyConfig = proxyConfig;
         this.socketConnectTimeoutMs = socketConnectTimeoutMs;
         this.mqttConnectTimeoutMs = mqttConnectTimeoutMs;
+        this.transportProtocol = transportProtocol;
     }
 
     @Override
@@ -113,6 +116,11 @@ public class MqttClientTransportConfigImpl implements MqttClientTransportConfig 
     @Override
     public int getMqttConnectTimeoutMs() {
         return mqttConnectTimeoutMs;
+    }
+
+    @Override
+    public @NotNull  MqttTransportProtocol getTransportProtocol() {
+        return transportProtocol;
     }
 
     @Override
