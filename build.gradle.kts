@@ -70,6 +70,7 @@ allprojects {
 allprojects {
     repositories {
         mavenCentral()
+        mavenLocal()
     }
 }
 
@@ -85,6 +86,8 @@ dependencies {
     implementation("org.jctools:jctools-core:${property("jctools.version")}")
     implementation("org.jetbrains:annotations:${property("annotations.version")}")
     implementation("com.google.dagger:dagger:${property("dagger.version")}")
+
+    implementation("com.protocol7:quincy-quic:${property("quic.version")}")
 
     compileOnly("org.slf4j:slf4j-api:${property("slf4j.version")}")
 
