@@ -181,6 +181,7 @@ public class MqttClientConfig implements Mqtt5ClientConfig {
             EventLoop eventLoop = this.eventLoop;
             if (eventLoop == null) {
                 this.eventLoop = eventLoop =
+                        // FIXME hardcoded to UDP currently
                         NettyEventLoopProviderUdp.INSTANCE.acquireEventLoop(executorConfig.getRawNettyExecutor(),
                                 executorConfig.getRawNettyThreads());
             }
@@ -199,6 +200,7 @@ public class MqttClientConfig implements Mqtt5ClientConfig {
                         if (eventLoopAcquireCount == this.eventLoopAcquireCount) { // eventLoop has not been reacquired
                             this.eventLoop = null;
                             // releaseEventLoop must be the last statement so everything is cleaned up even if it throws
+                            // FIXME hardcoded to UDP currently
                             NettyEventLoopProviderUdp.INSTANCE.releaseEventLoop(executorConfig.getRawNettyExecutor());
                         }
                     }

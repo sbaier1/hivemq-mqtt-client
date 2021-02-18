@@ -21,16 +21,21 @@ import com.hivemq.client.internal.mqtt.handler.auth.MqttAuthHandler;
 import com.hivemq.client.internal.mqtt.handler.auth.MqttConnectAuthHandler;
 import com.hivemq.client.internal.mqtt.handler.auth.MqttDisconnectOnAuthHandler;
 import com.hivemq.client.internal.mqtt.message.connect.MqttConnect;
-import com.hivemq.client.internal.netty.NettyEventLoopProviderTcp;
 import com.hivemq.client.internal.netty.NettyEventLoopProviderUdp;
 import dagger.Lazy;
 import dagger.Module;
 import dagger.Provides;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.incubator.codec.quic.*;
 import org.jetbrains.annotations.NotNull;
 
 import javax.inject.Named;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Silvio Giebl
@@ -39,21 +44,48 @@ import javax.inject.Named;
 abstract class ConnectionModule {
 
     @Provides
-    static @NotNull Bootstrap provideTcpBootstrap(final @NotNull MqttChannelInitializer channelInitializer) {
+    static QuicChannelBootstrap provideTcpBootstrap(final @NotNull MqttChannelInitializer channelInitializer) {
 
-        return new Bootstrap()
-                .channelFactory(NettyEventLoopProviderUdp.INSTANCE.getChannelFactory())
-                .handler(channelInitializer);
-        /*return new Bootstrap().channelFactory(NettyEventLoopProviderTcp.INSTANCE.getChannelFactory())
+        return udpInit(channelInitializer);
+        /*
+        // TODO screwed up the TCP bootstrap here for now
+        return new Bootstrap().channelFactory(NettyEventLoopProviderTcp.INSTANCE.getChannelFactory())
                 .handler(channelInitializer);*/
     }
 
     @Provides
-    @Named("UDP")
-    static @NotNull Bootstrap provideUdpBootstrap(final @NotNull MqttChannelInitializer channelInitializer) {
-        return new Bootstrap()
-                .channelFactory(NettyEventLoopProviderUdp.INSTANCE.getChannelFactory())
-                .handler(channelInitializer);
+    @Named("BLA")
+    static QuicChannelBootstrap provideUdpBootstrap(final @NotNull MqttChannelInitializer channelInitializer) {
+        return udpInit(channelInitializer);
+    }
+
+    private static QuicChannelBootstrap udpInit(@NotNull MqttChannelInitializer channelInitializer) {
+        QuicSslContext context = QuicSslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).
+                applicationProtocols("MQTT").build();
+
+        final ChannelHandler codec = new QuicClientCodecBuilder().maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
+                .initialMaxData(10000000)
+                .maxIdleTimeout(10, TimeUnit.SECONDS)
+                .sslContext(context)
+                // As we don't want to support remote initiated streams just setup the limit for local initiated
+                // streams in this example.
+                .initialMaxStreamDataBidirectionalLocal(1000000)
+                .build();
+        final Channel channel;
+        try {
+            channel = new Bootstrap().group(
+                    NettyEventLoopProviderUdp.INSTANCE.acquireEventLoop(Executors.newFixedThreadPool(8), 8))
+                    .channel(NioDatagramChannel.class)
+                    .handler(codec)
+                    .bind(0)
+                    .sync()
+                    .channel();
+            return QuicChannel.newBootstrap(channel);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        // TODO spax
+        return null;
     }
 
     @Provides

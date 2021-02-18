@@ -17,11 +17,13 @@
 package com.hivemq.client.internal.mqtt.ioc;
 
 import com.hivemq.client.internal.mqtt.codec.MqttCodecModule;
+import com.hivemq.client.internal.mqtt.handler.MqttChannelInitializer;
 import com.hivemq.client.internal.mqtt.handler.connect.MqttConnAckFlow;
 import com.hivemq.client.internal.mqtt.message.connect.MqttConnect;
 import dagger.BindsInstance;
 import dagger.Subcomponent;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.incubator.codec.quic.QuicChannelBootstrap;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -33,8 +35,10 @@ import org.jetbrains.annotations.NotNull;
 @ConnectionScope
 public interface ConnectionComponent {
 
-    @NotNull Bootstrap tcpBootstrap();
-    @NotNull Bootstrap udpBootstrap();
+    @NotNull QuicChannelBootstrap tcpBootstrap();
+    @NotNull QuicChannelBootstrap udpBootstrap();
+
+    @NotNull MqttChannelInitializer initializer();
 
     @Subcomponent.Builder
     interface Builder {

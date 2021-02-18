@@ -34,13 +34,18 @@ import com.hivemq.client.internal.mqtt.message.connect.MqttConnect;
 import com.hivemq.client.mqtt.exceptions.ConnectionFailedException;
 import com.hivemq.client.mqtt.lifecycle.MqttDisconnectSource;
 import dagger.Lazy;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.*;
+import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
+import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Initializes:
@@ -68,6 +73,8 @@ public class MqttChannelInitializer extends ChannelInboundHandlerAdapter {
 
     private final @NotNull Lazy<MqttWebSocketInitializer> webSocketInitializer;
 
+    private static final @NotNull Logger log = LoggerFactory.getLogger(MqttChannelInitializer.class);
+
     @Inject
     MqttChannelInitializer(
             final @NotNull MqttClientConfig clientConfig,
@@ -93,11 +100,15 @@ public class MqttChannelInitializer extends ChannelInboundHandlerAdapter {
     public void handlerAdded(final @NotNull ChannelHandlerContext ctx) {
         ctx.pipeline().remove(this);
 
-        ((SocketChannel) ctx.channel()).config()
-                .setKeepAlive(true)
-                .setTcpNoDelay(true)
-                .setConnectTimeoutMillis(clientConfig.getCurrentTransportConfig().getSocketConnectTimeoutMs());
-
+        if (ctx.channel() instanceof SocketChannel) {
+            ((SocketChannel) ctx.channel()).config()
+                    .setKeepAlive(true)
+                    .setTcpNoDelay(true)
+                    .setConnectTimeoutMillis(clientConfig.getCurrentTransportConfig().getSocketConnectTimeoutMs());
+        } else {
+            (ctx.channel()).config()
+                    .setConnectTimeoutMillis(clientConfig.getCurrentTransportConfig().getSocketConnectTimeoutMs());
+        }
         initProxy(ctx.channel());
     }
 
@@ -132,6 +143,7 @@ public class MqttChannelInitializer extends ChannelInboundHandlerAdapter {
 
     private void initMqtt(final @NotNull Channel channel) {
         channel.pipeline()
+                .addFirst(new LoggingHandler(LogLevel.INFO))
                 .addLast(MqttEncoder.NAME, encoder)
                 .addLast(MqttAuthHandler.NAME, authHandler)
                 .addLast(MqttConnectHandler.NAME, connectHandler)
@@ -140,6 +152,7 @@ public class MqttChannelInitializer extends ChannelInboundHandlerAdapter {
 
     private void onError(final @NotNull Channel channel, final @NotNull Throwable cause) {
         channel.close();
+        log.warn("Error", cause);
         MqttConnAckSingle.reconnect(clientConfig, MqttDisconnectSource.CLIENT, new ConnectionFailedException(cause),
                 connect, connAckFlow, channel.eventLoop());
     }
