@@ -39,10 +39,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.nio.NioDatagramChannel;
-import io.netty.incubator.codec.quic.QuicChannel;
-import io.netty.incubator.codec.quic.QuicChannelBootstrap;
-import io.netty.incubator.codec.quic.QuicClientCodecBuilder;
-import io.netty.incubator.codec.quic.QuicStreamType;
+import io.netty.incubator.codec.quic.*;
 import io.reactivex.Single;
 import io.reactivex.SingleObserver;
 import io.reactivex.internal.disposables.EmptyDisposable;
@@ -65,8 +62,7 @@ public class MqttConnAckSingle extends Single<Mqtt5ConnAck> {
     private final @NotNull MqttClientConfig clientConfig;
     private final @NotNull MqttConnect connect;
 
-    public MqttConnAckSingle(final @NotNull MqttClientConfig clientConfig,
-            final @NotNull MqttConnect connect) {
+    public MqttConnAckSingle(final @NotNull MqttClientConfig clientConfig, final @NotNull MqttConnect connect) {
         this.clientConfig = clientConfig;
         this.connect = connect.setDefaults(clientConfig);
     }
@@ -92,56 +88,44 @@ public class MqttConnAckSingle extends Single<Mqtt5ConnAck> {
             clientConfig.releaseEventLoop();
             clientConfig.getRawState().set(DISCONNECTED);
         } else {
-            final QuicChannelBootstrap bootstrap;
+            final MqttClientTransportConfigImpl transportConfig = clientConfig.getCurrentTransportConfig();
             if (MqttTransportProtocol.TCP.equals(clientConfig.getTransportConfig().getTransportProtocol())) {
-                bootstrap = clientConfig.getClientComponent()
+
+                final Bootstrap bootstrap = clientConfig.getClientComponent()
                         .connectionComponentBuilder()
                         .connect(connect)
                         .connAckFlow(flow)
+                        .remoteAddress(transportConfig.getRemoteAddress())
+                        .eventLoop(eventLoop)
                         .build()
                         .tcpBootstrap();
+
+
+                bootstrap.group(eventLoop)
+                        .connect(transportConfig.getRemoteAddress(), transportConfig.getRawLocalAddress())
+                        .addListener(future -> {
+                            final Throwable cause = future.cause();
+                            if (cause != null) {
+                                final ConnectionFailedException e = new ConnectionFailedException(cause);
+                                if (eventLoop.inEventLoop()) {
+                                    reconnect(clientConfig, MqttDisconnectSource.CLIENT, e, connect, flow, eventLoop);
+                                } else {
+                                    eventLoop.execute(
+                                            () -> reconnect(clientConfig, MqttDisconnectSource.CLIENT, e, connect, flow,
+                                                    eventLoop));
+                                }
+                            }
+                        });
             } else {
-                final ConnectionComponent component = clientConfig.getClientComponent()
+                // The bootstrap already configures the channel + stream with the proper MQTT handler
+                final QuicStreamChannel quicStream = clientConfig.getClientComponent()
                         .connectionComponentBuilder()
                         .connect(connect)
                         .connAckFlow(flow)
-                        .build();
-                bootstrap = component
-                        .udpBootstrap();
-                final MqttChannelInitializer initializer = component.initializer();
-                final MqttClientTransportConfigImpl transportConfig = clientConfig.getCurrentTransportConfig();
-
-                try {
-                    final QuicChannel channel = bootstrap.streamHandler(new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void channelActive(ChannelHandlerContext ctx) {
-                            // As we did not allow any remote initiated streams we will never see this method called.
-                            // That said just let us keep it here to demonstrate that this handle would be called
-                            // for each remote initiated stream.
-                            System.out.println("nope");
-                            ctx.close();
-                        }
-                    }).remoteAddress(transportConfig.getRemoteAddress()).connect().addListener(future -> {
-                        final Throwable cause = future.cause();
-                        if (cause != null) {
-                            System.out.println("Test " + cause);
-                            final ConnectionFailedException e = new ConnectionFailedException(cause);
-                            if (eventLoop.inEventLoop()) {
-                                reconnect(clientConfig, MqttDisconnectSource.CLIENT, e, connect, flow, eventLoop);
-                            } else {
-                                eventLoop.execute(
-                                        () -> reconnect(clientConfig, MqttDisconnectSource.CLIENT, e, connect, flow,
-                                                eventLoop));
-                            }
-                        }
-                    }).get();
-                    // TODO need the initializer here
-                    channel.createStream(QuicStreamType.BIDIRECTIONAL, initializer);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } catch (ExecutionException e) {
-                    e.printStackTrace();
-                }
+                        .remoteAddress(transportConfig.getRemoteAddress())
+                        .eventLoop(eventLoop)
+                        .build()
+                        .quicBootstrap();
             }
         }
     }

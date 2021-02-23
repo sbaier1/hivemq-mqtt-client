@@ -17,14 +17,16 @@
 package com.hivemq.client.internal.mqtt.ioc;
 
 import com.hivemq.client.internal.mqtt.codec.MqttCodecModule;
-import com.hivemq.client.internal.mqtt.handler.MqttChannelInitializer;
 import com.hivemq.client.internal.mqtt.handler.connect.MqttConnAckFlow;
 import com.hivemq.client.internal.mqtt.message.connect.MqttConnect;
 import dagger.BindsInstance;
 import dagger.Subcomponent;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.incubator.codec.quic.QuicChannelBootstrap;
+import io.netty.channel.EventLoop;
+import io.netty.incubator.codec.quic.QuicStreamChannel;
 import org.jetbrains.annotations.NotNull;
+
+import java.net.InetSocketAddress;
 
 /**
  * Component for a single client connection. A new one is created for each new client connection (also for reconnects).
@@ -35,10 +37,9 @@ import org.jetbrains.annotations.NotNull;
 @ConnectionScope
 public interface ConnectionComponent {
 
-    @NotNull QuicChannelBootstrap tcpBootstrap();
-    @NotNull QuicChannelBootstrap udpBootstrap();
+    @NotNull Bootstrap tcpBootstrap();
 
-    @NotNull MqttChannelInitializer initializer();
+    @NotNull QuicStreamChannel quicBootstrap();
 
     @Subcomponent.Builder
     interface Builder {
@@ -48,6 +49,14 @@ public interface ConnectionComponent {
 
         @BindsInstance
         @NotNull Builder connAckFlow(@NotNull MqttConnAckFlow connAckFlow);
+
+        // Only for QUIC
+        @BindsInstance
+        @NotNull Builder remoteAddress(@NotNull InetSocketAddress address);
+
+        // Only for QUIC
+        @BindsInstance
+        @NotNull Builder eventLoop(@NotNull EventLoop eventLoop);
 
         @NotNull ConnectionComponent build();
     }

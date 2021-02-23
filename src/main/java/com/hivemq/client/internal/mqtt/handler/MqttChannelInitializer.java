@@ -143,7 +143,6 @@ public class MqttChannelInitializer extends ChannelInboundHandlerAdapter {
 
     private void initMqtt(final @NotNull Channel channel) {
         channel.pipeline()
-                .addFirst(new LoggingHandler(LogLevel.INFO))
                 .addLast(MqttEncoder.NAME, encoder)
                 .addLast(MqttAuthHandler.NAME, authHandler)
                 .addLast(MqttConnectHandler.NAME, connectHandler)
